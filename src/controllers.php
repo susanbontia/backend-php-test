@@ -97,3 +97,28 @@ $app->match('/todo/delete/{id}', function ($id) use ($app) {
 
     return $app->redirect('/todo');
 });
+
+$app->get('/todo/{id}/json', function ($id) use ($app) {
+    if (null === $user = $app['session']->get('user')) {
+        return $app->redirect('/login');
+    }
+
+    if ($id){
+        $sql = "SELECT * FROM todos WHERE id = '$id'";
+        $todo = $app['db']->fetchAssoc($sql);
+
+        return $app['twig']->render('todo.html', [
+            'todo' => $todo,
+            'json' => json_encode($todo),
+        ]);
+    } else {
+        $sql = "SELECT * FROM todos WHERE user_id = '${user['id']}'";
+        $todos = $app['db']->fetchAll($sql);
+
+        return $app['twig']->render('todos.html', [
+            'todos' => $todos,
+            'json' => json_encode($todos),
+        ]);
+    }
+})
+    ->value('id', null);
