@@ -69,14 +69,15 @@ $app->post('/todo/add', function (Request $request) use ($app) {
     if (null === $user = $app['session']->get('user')) {
         return $app->redirect('/login');
     }
-
     $user_id = $user['id'];
     $description = $request->get('description');
-    if(empty($description) && $description === '') {
 
+    if(empty($description) && $description === '') {
+        $app['session']->getFlashBag()->add('warning', 'Description field is required.');
     } else {
         $sql = "INSERT INTO todos (user_id, description) VALUES ('$user_id', '$description')";
         $app['db']->executeUpdate($sql);
+        $app['session']->getFlashBag()->add('notice', 'Todo ' . $description . ' is successfully added.');
     }
 
     return $app->redirect('/todo');
@@ -86,7 +87,7 @@ $app->match('/todo/edit/{id}', function ($id) use ($app) {
 
     $sql = "UPDATE todos SET status = 'completed' WHERE id = '$id'";
     $app['db']->executeUpdate($sql);
-
+    $app['session']->getFlashBag()->add('notice', 'Todo ' . $id . ' is successfully marked as completed.');
     return $app->redirect('/todo');
 });
 
@@ -94,7 +95,7 @@ $app->match('/todo/delete/{id}', function ($id) use ($app) {
 
     $sql = "DELETE FROM todos WHERE id = '$id'";
     $app['db']->executeUpdate($sql);
-
+    $app['session']->getFlashBag()->add('notice', 'Todo ' . $id . ' is successfully deleted.');
     return $app->redirect('/todo');
 });
 
