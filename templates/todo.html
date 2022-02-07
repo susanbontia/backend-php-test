@@ -2,16 +2,16 @@
 
 {% block content %}
 <div class="col-md-4 col-md-offset-4">
-    <h1>Todo:</h1>
+    <h1>To do:</h1>
     <table class="table table-striped">
         {% if json is defined %}
-        <th>Your todo in JSON format is</th>
+        <th>Your to do in JSON format is</th>
         <th></th>
         <tr>
-            <td> {{ json }}</td>
+            <td><pre>{{ json }}</pre></td>
             <td>
                 <a href="{{ app.request.baseurl }}/todo">
-                    <button type="" class="btn btn-xs btn">Back</button>
+                    <button type="" class="btn btn-xs btn-info">Back</button>
                 </a>
             </td>
         </tr>

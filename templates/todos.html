@@ -11,7 +11,8 @@
 {% endfor %}
 
 <div class="col-md-4 col-md-offset-4">
-    <h1>Todo List:</h1>
+    <h1>To Do Lists:</h1>
+
     <table class="table table-striped">
         <th>#</th><th>User</th><th>Description</th><th>Status</th> <th>Update</th><th>Delete</th><th>View</th>
         {% for todo in todos %}
@@ -25,8 +26,13 @@
                 </td>
                 <td>{{ todo.status }} </td>
                 <td>
+
+                        {% if todo.status is same as 'Completed' %}
+                            <button type="submit" class="btn btn-xs btn-success"><span class="glyphicon glyphicon-ok glyphicon-white"></span></button>
+                        {% else %}
                     <form method="post" action="{{ app.request.baseurl }}/todo/edit/{{ todo.id }}">
-                        <button type="submit" class="btn btn-xs btn-success"><span class="glyphicon glyphicon-ok glyphicon-white"></span></button>
+                            <button type="submit" class="btn btn-xs btn"><span class="glyphicon glyphicon-check glyphicon-white"></span></button>
+                        {% endif %}
                     </form>
                 </td>
                 <td>
@@ -52,5 +58,17 @@
             </form>
         </tr>
     </table>
+    {% if total_pages > 1 %}
+    <nav aria-label="Page navigation example">
+        <ul class="pagination">
+            {% for page in range(1, total_pages) %}
+            <li class="page-item"><a class="page-link" href="{{ app.request.baseurl }}/todo?page={{ page }}">{{ page }}</a></li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
 </div>
+
+
+
 {% endblock %}

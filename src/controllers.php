@@ -3,12 +3,13 @@
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+CONST PAGINATION_LIMIT = 10;
+
 $app['twig'] = $app->share($app->extend('twig', function($twig, $app) {
     $twig->addGlobal('user', $app['session']->get('user'));
 
     return $twig;
 }));
-
 
 $app->get('/', function () use ($app) {
     return $app['twig']->render('index.html', [
@@ -16,17 +17,22 @@ $app->get('/', function () use ($app) {
     ]);
 });
 
-
 $app->match('/login', function (Request $request) use ($app) {
     $username = $request->get('username');
     $password = $request->get('password');
 
     if ($username) {
-        $sql = "SELECT * FROM users WHERE username = '$username' and password = '$password'";
-        $user = $app['db']->fetchAssoc($sql);
+
+        $entityManager = $app['orm.em'];
+        $user = $entityManager->getRepository('\App\Entity\User')
+            ->findBy(
+                [
+                    'username' => $username,
+                    'password' => $password
+                ]);
 
         if ($user){
-            $app['session']->set('user', $user);
+            $app['session']->set('user', $user[0]);
             return $app->redirect('/todo');
         }
     }
@@ -34,67 +40,92 @@ $app->match('/login', function (Request $request) use ($app) {
     return $app['twig']->render('login.html', array());
 });
 
-
 $app->get('/logout', function () use ($app) {
     $app['session']->set('user', null);
     return $app->redirect('/');
 });
-
 
 $app->get('/todo/{id}', function ($id) use ($app) {
     if (null === $user = $app['session']->get('user')) {
         return $app->redirect('/login');
     }
 
+    $entityManager = $app['orm.em'];
+
     if ($id){
-        $sql = "SELECT * FROM todos WHERE id = '$id'";
-        $todo = $app['db']->fetchAssoc($sql);
 
         return $app['twig']->render('todo.html', [
-            'todo' => $todo,
+            'todo' => $entityManager->find('\App\Entity\Todo', $id),
         ]);
     } else {
-        $sql = "SELECT * FROM todos WHERE user_id = '${user['id']}'";
-        $todos = $app['db']->fetchAll($sql);
+
+        $limit = PAGINATION_LIMIT;
+        $offset = isset($_GET['page']) ? ($_GET['page'] - 1) * $limit: 0;
+
+        $results = $entityManager
+            ->getRepository('\App\Entity\Todo')
+            ->findBy(
+                ['userId' => $user->getId()]
+            );
 
         return $app['twig']->render('todos.html', [
-            'todos' => $todos,
+            'todos' => $entityManager
+                ->getRepository('\App\Entity\Todo')
+                ->findBy(
+                    ['userId' => $user->getId()],
+                    null,
+                    $limit,
+                    $offset
+                ),
+            'total_pages' => ceil(count($results) / $limit),
         ]);
     }
 })
 ->value('id', null);
 
-
 $app->post('/todo/add', function (Request $request) use ($app) {
     if (null === $user = $app['session']->get('user')) {
         return $app->redirect('/login');
     }
-    $user_id = $user['id'];
+
     $description = $request->get('description');
 
-    if(empty($description) && $description === '') {
-        $app['session']->getFlashBag()->add('warning', 'Description field is required.');
-    } else {
-        $sql = "INSERT INTO todos (user_id, description) VALUES ('$user_id', '$description')";
-        $app['db']->executeUpdate($sql);
-        $app['session']->getFlashBag()->add('notice', 'Todo ' . $description . ' is successfully added.');
-    }
+        if(empty($description) && $description === '') {
+            $app['session']->getFlashBag()->add('warning', 'Description field is required.');
+        } else {
+
+            $entityManager = $app['orm.em'];
+            $todo = new \App\Entity\Todo();
+            $todo->setDescription($description)
+                ->setUser_Id($user->getId())
+                ->setStatus('Pending');
+            $entityManager->persist($todo);
+            $entityManager->flush();
+            $app['session']->getFlashBag()->add('notice', 'Todo ' . $description . ' is successfully added.');
+        }
 
     return $app->redirect('/todo');
 });
 
 $app->match('/todo/edit/{id}', function ($id) use ($app) {
 
-    $sql = "UPDATE todos SET status = 'completed' WHERE id = '$id'";
-    $app['db']->executeUpdate($sql);
+    $entityManager = $app['orm.em'];
+    $todo = new \App\Entity\Todo();
+    $todo = $entityManager->find('\App\Entity\Todo', $id);
+    $todo->setStatus('Completed');
+    $entityManager->persist($todo);
+    $entityManager->flush();
     $app['session']->getFlashBag()->add('notice', 'Todo ' . $id . ' is successfully marked as completed.');
     return $app->redirect('/todo');
 });
 
 $app->match('/todo/delete/{id}', function ($id) use ($app) {
 
-    $sql = "DELETE FROM todos WHERE id = '$id'";
-    $app['db']->executeUpdate($sql);
+    $entityManager = $app['orm.em'];
+    $todo = new \App\Entity\Todo();
+    $todo = $entityManager->find('\App\Entity\Todo', $id);
+    $entityManager->remove($todo);
+    $entityManager->flush();
     $app['session']->getFlashBag()->add('notice', 'Todo ' . $id . ' is successfully deleted.');
     return $app->redirect('/todo');
 });
@@ -104,22 +135,14 @@ $app->get('/todo/{id}/json', function ($id) use ($app) {
         return $app->redirect('/login');
     }
 
-    if ($id){
-        $sql = "SELECT * FROM todos WHERE id = '$id'";
-        $todo = $app['db']->fetchAssoc($sql);
+    $entityManager = $app['orm.em'];
+    $todo = $entityManager->find('\App\Entity\Todo', $id);
 
-        return $app['twig']->render('todo.html', [
-            'todo' => $todo,
-            'json' => json_encode($todo),
-        ]);
-    } else {
-        $sql = "SELECT * FROM todos WHERE user_id = '${user['id']}'";
-        $todos = $app['db']->fetchAll($sql);
+    return $app['twig']->render('todo.html', [
+        'todo' => $todo,
+        'json' => $todo->serializer()
+    ]);
 
-        return $app['twig']->render('todos.html', [
-            'todos' => $todos,
-            'json' => json_encode($todos),
-        ]);
-    }
+
 })
     ->value('id', null);
