@@ -1,6 +1,10 @@
 {% extends "layout.html" %}
 
 {% block content %}
+{% for warning in app.session.flashbag.get('warning') %}
+    <div class="alert alert-danger" role="alert">{{ warning }}</div>
+{% endfor %}
+
     <div class="col-md-4 col-md-offset-4">
         <h1>Login</h1>
         <form class="form-horizontal login-form" method="POST" action="/login">

@@ -18,27 +18,31 @@ $app->get('/', function () use ($app) {
 });
 
 $app->match('/login', function (Request $request) use ($app) {
-    $username = $request->get('username');
-    $password = $request->get('password');
 
-    if ($username) {
+        $username = $request->get('username');
+        $password = $request->get('password');
 
-        $entityManager = $app['orm.em'];
-        $user = $entityManager->getRepository('\App\Entity\User')
-            ->findBy(
-                [
+        if ($username) {
+
+            $entityManager = $app['orm.em'];
+            $user = $entityManager->getRepository('\App\Entity\User')
+                ->findBy([
                     'username' => $username,
                     'password' => $password
                 ]);
 
-        if ($user){
-            $app['session']->set('user', $user[0]);
-            return $app->redirect('/todo');
-        }
-    }
+            if ($user) {
+                $app['session']->set('user', $user[0]);
+                return $app->redirect('/todo');
 
-    return $app['twig']->render('login.html', array());
-});
+            } else {
+                $app['session']->getFlashBag()->add('warning', 'Invalid username or password.');
+            }
+
+        }
+
+        return $app['twig']->render('login.html', array());
+    });
 
 $app->get('/logout', function () use ($app) {
     $app['session']->set('user', null);
@@ -126,7 +130,7 @@ $app->match('/todo/delete/{id}', function ($id) use ($app) {
     $todo = $entityManager->find('\App\Entity\Todo', $id);
     $entityManager->remove($todo);
     $entityManager->flush();
-    $app['session']->getFlashBag()->add('notice', 'Todo ' . $id . ' is successfully deleted.');
+    $app['session']->getFlashBag()->add('notice', 'Todo \'[' . $id . ']: ' .$todo->getDescription() . '\' is successfully deleted.');
     return $app->redirect('/todo');
 });
 
