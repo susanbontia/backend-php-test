@@ -95,7 +95,7 @@ $app->post('/todo/add', function (Request $request) use ($app) {
     $description = $request->get('description');
 
         if(empty($description) && $description === '') {
-            $app['session']->getFlashBag()->add('warning', 'Description field is required.');
+            $app['session']->getFlashBag()->add('warning', 'Please enter description to add a to do.');
         } else {
 
             $entityManager = $app['orm.em'];
@@ -105,7 +105,7 @@ $app->post('/todo/add', function (Request $request) use ($app) {
                 ->setStatus('Pending');
             $entityManager->persist($todo);
             $entityManager->flush();
-            $app['session']->getFlashBag()->add('notice', 'Todo ' . $description . ' is successfully added.');
+            $app['session']->getFlashBag()->add('notice', 'Todo \'' . $description . '\' is successfully added.');
         }
 
     return $app->redirect('/todo');
@@ -119,7 +119,7 @@ $app->match('/todo/edit/{id}', function ($id) use ($app) {
     $todo->setStatus('Completed');
     $entityManager->persist($todo);
     $entityManager->flush();
-    $app['session']->getFlashBag()->add('notice', 'Todo ' . $id . ' is successfully marked as completed.');
+    $app['session']->getFlashBag()->add('notice', 'Todo \'[' . $id . ']: ' .$todo->getDescription() . '\' is successfully marked as completed.');
     return $app->redirect('/todo');
 });
 
